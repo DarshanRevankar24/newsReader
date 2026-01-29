@@ -34,3 +34,27 @@ def get_news(topic: str):
 
     summarize=summarize_articles(ranked_articles)
     return summarize
+
+
+from agents.memory_agent import update_memory, get_user_interests
+
+@app.get("/news/{category}")
+def get_news(category: str, user_id: str = "user_1"):
+    articles = fetch_news(category)
+
+    interests = get_user_interests(user_id)
+
+    ranked_articles = rank_articles_with_llm(
+        articles,
+        interests
+    )
+
+    summaries = summarize_articles(ranked_articles[:5])
+
+    update_memory(user_id, ranked_articles[:5])
+
+    return {
+        "user_id": user_id,
+        "interests": interests,
+        "news": summaries
+    }
