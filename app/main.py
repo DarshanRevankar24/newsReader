@@ -1,9 +1,18 @@
 from fastapi import FastAPI,Query
 from services.rss_fetcher import fetch_rss
 from agents.rss_agent import get_articles_for_topic
-from agents.rank_agent import rank_articles
+from agents.rank_agent import rank_articles_with_llm
 from agents.summary_agent import summarize_articles
 app=FastAPI()
+
+USER_INTERESTS = [
+    "AI",
+    "Artificial Intelligence",
+    "Technology",
+    "India",
+    "Startups"
+]
+
 
 @app.get("/")
 def home():
@@ -18,6 +27,10 @@ def get_news():
 @app.get("/news/{topic}")
 def get_news(topic: str):
     articles= get_articles_for_topic(topic)
-    ranked_articles=rank_articles(articles)
+    ranked_articles = rank_articles_with_llm(
+    articles,
+    USER_INTERESTS
+)
+
     summarize=summarize_articles(ranked_articles)
     return summarize

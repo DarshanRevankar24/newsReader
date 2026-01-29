@@ -1,10 +1,6 @@
-USER_INTERESTS = [
-    "AI",
-    "Artificial Intelligence",
-    "Technology",
-    "India",
-    "Startups"
-]
+from agents.summary_agent import llm
+from langchain_core.messages import HumanMessage
+
 
 
 def deduplicate_articles(articles):
@@ -44,28 +40,42 @@ def score_article(article):
 
     return score
     
-def rank_articles(articles, interests=USER_INTERESTS):
-    ranked_articles = []
+
+def llm_score_article(article, interests):
+    prompt = f"""
+You are a news relevance evaluator.
+
+User interests:
+{", ".join(interests)}
+
+Article title:
+{article['title']}
+
+Article summary:
+{article['summary']}
+
+Give a relevance score from 0 to 10.
+Respond with ONLY a number.
+"""
+
+    response = llm.invoke([HumanMessage(content=prompt)])
+    return int(response.content.strip())
+
+def rank_articles_with_llm(articles, interests):
+    ranked = []
 
     for article in articles:
-        title = article.get("title", "").lower()
-        summary = article.get("summary", "").lower()
+        llm_score = llm_score_article(article, interests)
 
-        score = 0
-        for topic in interests:
-            if topic.lower() in title or topic.lower() in summary:
-                score += 1
+        article["llm_score"] = llm_score
+        ranked.append(article)
 
-        article["relevance_score"] = score
-        ranked_articles.append(article)
-
-    ranked_articles.sort(
-        key=lambda x: x["relevance_score"],
+    ranked.sort(
+        key=lambda x: x["llm_score"],
         reverse=True
     )
 
-    return ranked_articles
-
+    return ranked
 
 # def process_articles(articles, top_k=10):
 #     unique = deduplicate_articles(articles)
