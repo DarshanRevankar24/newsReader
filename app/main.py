@@ -1,23 +1,27 @@
-from fastapi import FastAPI,Query
+from fastapi import FastAPI, Query
+from agents.briefing_agent import generate_daily_briefing
+
+# ... existing imports ...
 from services.rss_fetcher import fetch_rss
 from agents.rss_agent import get_articles_for_topic
 from agents.rank_agent import rank_articles_with_llm
 from agents.summary_agent import summarize_articles
 from agents.memory_agent import update_memory, get_user_interests
-app=FastAPI()
 
-USER_INTERESTS = [
-    "AI",
-    "Artificial Intelligence",
-    "Technology",
-    "India",
-    "Startups"
-]
-
+app = FastAPI()
 
 @app.get("/")
 def home():
     return {"backend":"up"}
+
+@app.get("/briefing")
+def get_briefing(user_id: str = "user_1"):
+    numeric_uid = 1
+    if user_id.startswith("user_"):
+         numeric_uid = int(user_id.split("_")[1])
+    
+    briefing = generate_daily_briefing(numeric_uid)
+    return {"briefing": briefing}
 
 @app.get("/news/{topic}")
 def get_news(topic: str, user_id: str = "user_1"):

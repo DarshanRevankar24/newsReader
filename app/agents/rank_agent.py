@@ -1,5 +1,15 @@
 from agents.summary_agent import llm
 from langchain_core.messages import HumanMessage
+from utils.embeddings import embed
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+def calculate_similarity(vec1_list, vec2_list):
+    if not vec1_list or not vec2_list:
+        return 0.0
+    v1 = np.array(vec1_list).reshape(1, -1)
+    v2 = np.array(vec2_list).reshape(1, -1)
+    return cosine_similarity(v1, v2)[0][0]
 
 
 
@@ -78,14 +88,24 @@ def rank_articles_with_llm(articles, interests):
     
     print(f"Ranking {len(unique_articles)} articles for interests: {interests}")
     
+    # Generate embedding for interests (simplistic approach: concat interests)
+    interest_text = ", ".join(interests)
+    interest_embedding = embed(interest_text)
+
     for article in unique_articles:
-        # Combined score: Basic heuristic + LLM
-        # Doing LLM on all might be slow/expensive, limiting to top 20 candidate by heuristic first is better practice
-        # but for now we follow the user's lead.
-        # Let's simple check if we want to run LLM on all. 
-        # To save tokens/time, let's just score with LLM if title matches keywords? 
-        # No, let's just do it.
-        score = llm_score_article(article, interests)
+        score = 0
+        
+        # 1. Vector Similarity Score (if models loaded)
+        article_embedding = embed(article['title'] + " " + article['summary'])
+        sim = calculate_similarity(interest_embedding, article_embedding)
+        score += sim * 10  # Weight similarity heavily (0-1 -> 0-10)
+        
+        # 2. Heuristic Score (Recency, Sources)
+        score += score_article(article)
+        
+        # 3. LLM Score (Optional/Refinement)
+        # score += llm_score_article(article, interests)
+
         scored_articles.append((article, score))
         
     # Sort by score desc
