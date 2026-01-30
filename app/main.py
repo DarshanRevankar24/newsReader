@@ -58,3 +58,19 @@ def get_news(category: str, user_id: str = "user_1"):
         "interests": interests,
         "news": summaries
     }
+
+
+from app.agents.profile_agent import get_or_create_user_profile
+
+@app.get("/news/{topic}")
+def get_news(topic: str, user_id: int = 1):
+    user_profile = get_or_create_user_profile(user_id)
+
+    articles = ingest_articles(topic)
+    ranked = rank_articles_with_llm(
+        articles,
+        user_profile.embedding
+    )
+    summaries = summarize_articles(ranked[:10])
+
+    return summaries
