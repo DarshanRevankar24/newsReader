@@ -24,3 +24,11 @@ class Article(Base):
     source = Column(String)
     published = Column(DateTime)
     embedding = Column(Text)
+
+class UserInteraction(Base):
+    __tablename__ = "user_interactions"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    article_link = Column(String)
+    interaction_type = Column(String) # like, dislike, click
+    timestamp = Column(DateTime, default=datetime.utcnow)

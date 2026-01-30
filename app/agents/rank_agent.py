@@ -42,6 +42,9 @@ def score_article(article):
     
 
 def llm_score_article(article, interests):
+    if not llm:
+        return 0
+
     prompt = f"""
 You are a news relevance evaluator.
 
@@ -58,26 +61,34 @@ Give a relevance score from 0 to 10.
 Respond with ONLY a number.
 """
 
-    response = llm.invoke([HumanMessage(content=prompt)])
-    return int(response.content.strip())
+    try:
+        response = llm.invoke([HumanMessage(content=prompt)])
+        try:
+            return int(response.content.strip())
+        except ValueError:
+            return 0
+    except Exception:
+        return 0
 
 def rank_articles_with_llm(articles, interests):
-    ranked = []
-
-    for article in articles:
-        llm_score = llm_score_article(article, interests)
-
-        article["llm_score"] = llm_score
-        ranked.append(article)
-
-    ranked.sort(
-        key=lambda x: x["llm_score"],
-        reverse=True
-    )
-
-    return ranked
-
-# def process_articles(articles, top_k=10):
-#     unique = deduplicate_articles(articles)
-#     ranked = rank_articles(unique, top_k)
-#     return ranked
+    scored_articles = []
+    
+    # Deduplicate first
+    unique_articles = deduplicate_articles(articles)
+    
+    print(f"Ranking {len(unique_articles)} articles for interests: {interests}")
+    
+    for article in unique_articles:
+        # Combined score: Basic heuristic + LLM
+        # Doing LLM on all might be slow/expensive, limiting to top 20 candidate by heuristic first is better practice
+        # but for now we follow the user's lead.
+        # Let's simple check if we want to run LLM on all. 
+        # To save tokens/time, let's just score with LLM if title matches keywords? 
+        # No, let's just do it.
+        score = llm_score_article(article, interests)
+        scored_articles.append((article, score))
+        
+    # Sort by score desc
+    scored_articles.sort(key=lambda x: x[1], reverse=True)
+    
+    return [a[0] for a in scored_articles]

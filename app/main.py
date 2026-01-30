@@ -3,6 +3,7 @@ from services.rss_fetcher import fetch_rss
 from agents.rss_agent import get_articles_for_topic
 from agents.rank_agent import rank_articles_with_llm
 from agents.summary_agent import summarize_articles
+from agents.memory_agent import update_memory, get_user_interests
 app=FastAPI()
 
 USER_INTERESTS = [
@@ -18,40 +19,35 @@ USER_INTERESTS = [
 def home():
     return {"backend":"up"}
 
-@app.get("/news")
-def get_news():
-    url = "https://feeds.bbci.co.uk/news/rss.xml"
-    return fetch_rss(url,10)
-
-
 @app.get("/news/{topic}")
-def get_news(topic: str):
-    articles= get_articles_for_topic(topic)
-    ranked_articles = rank_articles_with_llm(
-    articles,
-    USER_INTERESTS
-)
+def get_news(topic: str, user_id: str = "user_1"):
+    # 1. Get articles for the topic
+    # Using get_articles_for_topic from rss_agent
+    articles = get_articles_for_topic(topic)
+    
+    if not articles:
+        return {"message": f"No articles found for topic: {topic}", "news": []}
 
-    summarize=summarize_articles(ranked_articles)
-    return summarize
-
-
-from agents.memory_agent import update_memory, get_user_interests
-
-@app.get("/news/{category}")
-def get_news(category: str, user_id: str = "user_1"):
-    articles = fetch_news(category)
-
+    # 2. Get User Interests
+    # Currently from memory_agent (in-memory), later will be from DB
     interests = get_user_interests(user_id)
-
+    
+    # 3. Rank Articles
+    # Using the fixed rank_agent function
     ranked_articles = rank_articles_with_llm(
         articles,
         interests
     )
 
-    summaries = summarize_articles(ranked_articles[:5])
+    # 4. Limit and Summarize
+    # Summarize top 5
+    top_articles = ranked_articles[:5]
+    summaries = summarize_articles(top_articles)
 
-    update_memory(user_id, ranked_articles[:5])
+    # 5. Update Memory
+    # Record that these articles proved relevant (or just seen)
+    update_memory(user_id, top_articles)
+    save_articles_to_db(top_articles)
 
     return {
         "user_id": user_id,
@@ -59,18 +55,80 @@ def get_news(category: str, user_id: str = "user_1"):
         "news": summaries
     }
 
+from pydantic import BaseModel
 
-from app.agents.profile_agent import get_or_create_user_profile
+class Feedback(BaseModel):
+    user_id: str
+    article_link: str
+    interaction_type: str  # 'like', 'dislike', 'click'
 
-@app.get("/news/{topic}")
-def get_news(topic: str, user_id: int = 1):
-    user_profile = get_or_create_user_profile(user_id)
-
-    articles = ingest_articles(topic)
-    ranked = rank_articles_with_llm(
-        articles,
-        user_profile.embedding
+@app.post("/feedback")
+def submit_feedback(feedback: Feedback):
+    db = SessionLocal()
+    
+    # Resolve User Link
+    numeric_user_id = 1
+    if feedback.user_id.isdigit():
+        numeric_user_id = int(feedback.user_id)
+    elif "_" in feedback.user_id:
+         numeric_user_id = int(feedback.user_id.split("_")[1])
+    
+    from db.models import UserInteraction, Article
+    
+    # Log Interaction
+    interaction = UserInteraction(
+        user_id=numeric_user_id,
+        article_link=feedback.article_link,
+        interaction_type=feedback.interaction_type
     )
-    summaries = summarize_articles(ranked[:10])
+    db.add(interaction)
+    
+    # Process Feedback for Profile Update
+    # 1. Fetch article from DB
+    article = db.query(Article).filter(Article.id == feedback.article_link).first()
+    
+    if article:
+        # 2. Update Profile
+        from agents.profile_agent import update_user_profile
+        
+        signal = f"User {feedback.interaction_type}ed article: '{article.title}'. Summary: {article.summary}"
+        update_user_profile(numeric_user_id, signal)
+        print(f"Updated profile for user {numeric_user_id} based on feedback for {article.title}")
+    
+    db.commit()
+    db.close()
+    
+    return {"status": "success", "message": "Feedback recorded and profile updated"}
 
-    return summaries
+from db.models import UserProfile, Article
+from db.core import SessionLocal
+
+def save_articles_to_db(articles):
+    db = SessionLocal()
+    for art in articles:
+        # Check if exists
+        exists = db.query(Article).filter(Article.id == art['link']).first()
+        if not exists:
+            new_art = Article(
+                id=art['link'],
+                title=art['title'],
+                summary=art['summary'],
+                source=art['source'],
+                published=None, # date parsing is complex, skipping for now
+                embedding=""
+            )
+            db.add(new_art)
+    db.commit()
+    db.close()
+
+def get_user_profile_text(user_id):
+    db = SessionLocal()
+    # Handle user_id str -> int conversion if needed for DB lookup
+    # But UserProfile.user_id is Integer.
+    uid = 1
+    if user_id.startswith("user_"):
+        uid = int(user_id.split("_")[1])
+        
+    profile = db.query(UserProfile).filter_by(user_id=uid).first()
+    db.close()
+    return profile.profile_text if profile else "General news reader"
