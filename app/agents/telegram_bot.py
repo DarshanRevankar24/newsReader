@@ -27,7 +27,7 @@ logging.basicConfig(
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="Hello! I am your AI News Agent.\n\nCommands:\n/news <topic> - Get latest news\n/briefing - Get daily AI briefing\n/help - Show this message\n\n☕ You can support me here: https://buymeacoffee.com/darshanrevankar"
+        text="Hello! I am your AI News Agent.\n\nCommands:\n/news <topic> - Get latest news\n/briefing - Get daily AI briefing\n/help - Show this message"
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
