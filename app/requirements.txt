@@ -6,3 +6,5 @@ python-telegram-bot
 sqlalchemy
 uvicorn
 fastapi
+duckduckgo-search
+sentence-transformers
