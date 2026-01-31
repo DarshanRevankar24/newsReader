@@ -73,6 +73,32 @@ RSS_FEEDS = {
 
 from services.rss_fetcher import fetch_rss
 import urllib.parse
+from duckduckgo_search import DDGS
+
+def search_web_fallback(topic: str, limit: int = 5):
+    """
+    Search web using DuckDuckGo if RSS fails.
+    """
+    print(f"RSS failed. Searching web for: {topic}")
+    results = []
+    try:
+        ddgs = DDGS()
+        # Use 'news' backend if possible, or text search
+        # Simple text search often works better for general topics
+        search_results = ddgs.text(topic, max_results=limit) 
+        
+        for res in search_results:
+            results.append({
+                "title": res.get('title', 'No Title'),
+                "link": res.get('href', ''),
+                "summary": res.get('body', ''),
+                "source": "Web Search",
+                "published": "Unknown"
+            })
+    except Exception as e:
+        print(f"Error in web search fallback: {e}")
+        
+    return results
 
 def get_articles_for_topic(topic:str, limit:int=5):
     normalized_topic = topic.lower().strip()
@@ -100,5 +126,9 @@ def get_articles_for_topic(topic:str, limit:int=5):
         except Exception as e:
             print(f"Error fetching feed {feed_url}: {e}")
             continue
+            
+    # 3. If still no articles, try Web Search Fallback
+    if not all_articles:
+        all_articles = search_web_fallback(topic, limit)
             
     return all_articles    
