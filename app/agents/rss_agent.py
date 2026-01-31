@@ -12,25 +12,62 @@ RSS_FEEDS = {
     "technology": [
         "https://feeds.bbci.co.uk/news/technology/rss.xml",
         "https://techcrunch.com/feed/",
+        "https://www.theverge.com/rss/index.xml",
+        "https://www.wired.com/feed/rss"
+    ],
+    "tech": [ # Alias for technology
+        "https://feeds.bbci.co.uk/news/technology/rss.xml",
+        "https://techcrunch.com/feed/",
         "https://www.theverge.com/rss/index.xml"
     ],
     "business": [
         "https://feeds.bbci.co.uk/news/business/rss.xml",
-        "https://www.cnbc.com/id/10000664/device/rss/rss.html"
+        "https://www.cnbc.com/id/10000664/device/rss/rss.html",
+        "https://feeds.bloomberg.com/markets/news.xml"
+    ],
+    "finance": [ # Alias/Separate
+        "https://www.cnbc.com/id/10000664/device/rss/rss.html",
+        "https://feeds.bloomberg.com/markets/news.xml",
+        "https://www.financialexpress.com/feed/"
     ],
     "sports": [
         "https://feeds.bbci.co.uk/sport/rss.xml",
         "https://www.espncricinfo.com/rss/content/story/feeds/0.xml"
     ],
     "football": [
-        "https://feeds.bbci.co.uk/sport/football/rss.xml"
+        "https://feeds.bbci.co.uk/sport/football/rss.xml",
+        "https://www.goal.com/feeds/en/news"
     ],
     "cricket": [
-        "https://www.espncricinfo.com/rss/content/story/feeds/0.xml"
+        "https://www.espncricinfo.com/rss/content/story/feeds/0.xml",
+        "https://www.cricbuzz.com/rss/news"
     ],
     "science": [
         "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
         "https://www.sciencedaily.com/rss/top/science.xml"
+    ],
+    "health": [
+        "https://feeds.bbci.co.uk/news/health/rss.xml",
+        "https://www.medicalnewstoday.com/feed",
+        "https://www.webmd.com/rss/public/rss.aspx?feed_id=1"
+    ],
+    "entertainment": [
+        "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+        "https://www.hollywoodreporter.com/feed/",
+        "https://variety.com/feed/"
+    ],
+    "politics": [
+        "https://feeds.bbci.co.uk/news/politics/rss.xml",
+        "https://rss.politico.com/politics-news.xml"
+    ],
+    "ai": [
+        "https://www.sciencedaily.com/rss/computers_math/artificial_intelligence.xml",
+        "https://wired.com/feed/tag/ai/latest/rss",
+        "https://mit-news-rss.mit.edu/rss/topic/artificial-intelligence2"
+    ],
+    "startups": [
+        "https://techcrunch.com/startups/feed/",
+        "https://feeds.feedburner.com/entrepreneur/latest"
     ]
 }
 
