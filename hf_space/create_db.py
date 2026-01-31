@@ -1,0 +1,5 @@
+from db.core import engine
+from db.models import Base
+
+Base.metadata.create_all(bind=engine)
+print("✅ SQLite DB created")
