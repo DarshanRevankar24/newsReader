@@ -14,6 +14,14 @@ app = FastAPI()
 def home():
     return {"backend":"up"}
 
+from db.models import Base
+from db.core import engine
+
+@app.on_event("startup")
+def on_startup():
+    print("Creating database tables...")
+    Base.metadata.create_all(bind=engine)
+
 @app.get("/briefing")
 def get_briefing(user_id: str = "user_1"):
     numeric_uid = 1
