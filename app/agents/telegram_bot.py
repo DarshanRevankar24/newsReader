@@ -64,7 +64,7 @@ async def get_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Convert list of dicts to a single text
         final_text = f"**Summary for {topic}:**\n\n"
         for item in summary_data:
-            final_text += f"• **{item['title']}**: {item['summary']}\n\n"
+            final_text += f"• **{item['title']}**\n{item['summary']}\n🔗 Read more: {item['link']}\n\n"
             
         final_text += "\n\n☕ You can support me here: https://buymeacoffee.com/darshanrevankar"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=final_text)
