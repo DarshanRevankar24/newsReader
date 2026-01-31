@@ -1,0 +1,13 @@
+feedparser
+python-dotenv
+langchain-groq
+langchain-core
+python-telegram-bot
+sqlalchemy
+uvicorn
+fastapi
+duckduckgo-search
+sentence-transformers
+scikit-learn
+numpy
+requests
