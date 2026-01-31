@@ -8,3 +8,6 @@ uvicorn
 fastapi
 duckduckgo-search
 sentence-transformers
+scikit-learn
+numpy
+requests
