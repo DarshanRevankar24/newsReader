@@ -27,7 +27,7 @@ logging.basicConfig(
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="Hello! I am your AI News Agent.\n\nCommands:\n/news <topic> - Get latest news\n/briefing - Get daily AI briefing\n/help - Show this message"
+        text="Hello! I am your AI News Agent.\n\nCommands:\n/news <topic> - Get latest news\n/briefing - Get daily AI briefing\n/help - Show this message\n\n☕ You can support me here: https://buymeacoffee.com/darshanrevankar"
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -66,6 +66,7 @@ async def get_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for item in summary_data:
             final_text += f"• **{item['title']}**: {item['summary']}\n\n"
             
+        final_text += "\n\n☕ You can support me here: https://buymeacoffee.com/darshanrevankar"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=final_text)
 
     except Exception as e:
@@ -83,6 +84,7 @@ async def get_briefing(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         # This calls LLM, might block event loop if not careful, but fine for MVP
         briefing = generate_daily_briefing(mapped_user_id)
+        briefing += "\n\n☕ You can support me here: https://buymeacoffee.com/darshanrevankar"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=briefing)
     except Exception as e:
          logging.error(f"Error generating briefing: {e}")
