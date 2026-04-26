@@ -144,3 +144,25 @@ def get_user_profile_text(user_id):
     profile = db.query(UserProfile).filter_by(user_id=uid).first()
     db.close()
     return profile.profile_text if profile else "General news reader"
+
+from agents.telegram_bot import get_application
+
+bot_app = get_application()
+
+@app.on_event("startup")
+async def startup_bot_event():
+    if bot_app:
+        print("Starting Telegram polling natively in FastAPI...", flush=True)
+        await bot_app.initialize()
+        await bot_app.start()
+        await bot_app.updater.start_polling(drop_pending_updates=True)
+    else:
+        print("Telegram bot not started - missing token?", flush=True)
+
+@app.on_event("shutdown")
+async def shutdown_bot_event():
+    if bot_app:
+        print("Shutting down Telegram bot...", flush=True)
+        await bot_app.updater.stop()
+        await bot_app.stop()
+        await bot_app.shutdown()

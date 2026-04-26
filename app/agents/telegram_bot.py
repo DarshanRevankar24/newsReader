@@ -103,11 +103,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.args = topic.split()
     await get_news(update, context)
 
-if __name__ == '__main__':
+def get_application():
     TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     if not TOKEN:
         print("Error: TELEGRAM_BOT_TOKEN not found in .env")
-        exit(1)
+        return None
 
     application = ApplicationBuilder().token(TOKEN).read_timeout(30).write_timeout(30).build()
     
@@ -119,5 +119,10 @@ if __name__ == '__main__':
     # Handle non-command text messages
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     
-    print(f"Bot starting... Connected to {BACKEND_URL}")
-    application.run_polling()
+    return application
+
+if __name__ == '__main__':
+    app_bot = get_application()
+    if app_bot:
+        print(f"Bot starting... Connected to {BACKEND_URL}")
+        app_bot.run_polling(drop_pending_updates=True, stop_signals=None)
