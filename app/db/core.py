@@ -2,7 +2,7 @@ print("Loading db.core...")
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "sqlite:///./news_ai.db"
+DATABASE_URL = "sqlite:////tmp/news_ai.db"
 
 engine = create_engine(
     DATABASE_URL, connect_args={"check_same_thread": False}
