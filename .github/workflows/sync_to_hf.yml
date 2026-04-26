@@ -17,7 +17,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          cd hf_space
+          cd app
           cp ../.gitignore .
           rm -rf .git
           git config --global user.email "bot@example.com"
