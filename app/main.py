@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Query
+import os
+from fastapi import FastAPI, Query, Request
 from agents.briefing_agent import generate_daily_briefing
 
 # ... existing imports ...
@@ -146,33 +147,48 @@ def get_user_profile_text(user_id):
     return profile.profile_text if profile else "General news reader"
 
 from agents.telegram_bot import get_application
+from telegram import Update
+import json
 
-# Defer instantiation here globally
+# Webhook URL - the public URL of the Hugging Face Space
+SPACE_URL = os.getenv("SPACE_URL", "https://darshanrevankar-newsai.hf.space")
+WEBHOOK_PATH = "/telegram-webhook"
+WEBHOOK_URL = f"{SPACE_URL}{WEBHOOK_PATH}"
+
 bot_app = None
 
 @app.on_event("startup")
 async def startup_bot_event():
     global bot_app
     bot_app = get_application()
-    
+
     if bot_app:
         try:
-            print("Starting Telegram polling natively in FastAPI...", flush=True)
+            print(f"Initializing Telegram bot and registering webhook at {WEBHOOK_URL}...", flush=True)
             await bot_app.initialize()
-            await bot_app.start()
-            await bot_app.updater.start_polling(drop_pending_updates=True)
-            print("Telegram bot polling started successfully.", flush=True)
+            await bot_app.bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
+            print("Telegram webhook registered successfully.", flush=True)
         except Exception as e:
-            print(f"Warning: Telegram bot failed to start: {e}", flush=True)
+            print(f"Warning: Telegram webhook setup failed: {e}", flush=True)
             bot_app = None
     else:
-        print("Telegram bot not started - missing token?", flush=True)
+        print("Telegram bot not started - missing TELEGRAM_BOT_TOKEN?", flush=True)
 
 @app.on_event("shutdown")
 async def shutdown_bot_event():
     global bot_app
     if bot_app:
-        print("Shutting down Telegram bot...", flush=True)
-        await bot_app.updater.stop()
-        await bot_app.stop()
-        await bot_app.shutdown()
+        try:
+            await bot_app.bot.delete_webhook()
+            await bot_app.shutdown()
+        except Exception as e:
+            print(f"Error during bot shutdown: {e}", flush=True)
+
+@app.post(WEBHOOK_PATH)
+async def telegram_webhook(request: Request):
+    if not bot_app:
+        return {"ok": False}
+    data = await request.json()
+    update = Update.de_json(data, bot_app.bot)
+    await bot_app.process_update(update)
+    return {"ok": True}
