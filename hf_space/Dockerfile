@@ -22,5 +22,5 @@ ENV PATH="/home/user/.local/bin:$PATH"
 # Expose the Hugging Face Spaces port
 EXPOSE 7860
 
-# Command to run both safely out of shell '&' weirdness
-CMD ["python", "run_both.py"]
+# Command to run the application using uvicorn correctly within docker
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
