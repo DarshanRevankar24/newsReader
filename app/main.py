@@ -146,56 +146,96 @@ def get_user_profile_text(user_id):
     db.close()
     return profile.profile_text if profile else "General news reader"
 
-from agents.telegram_bot import get_application
-from telegram import Update
-import json
+from telegram import Bot, Update
 
-# Webhook URL - the public URL of the Hugging Face Space
+# Telegram config
 SPACE_URL = os.getenv("SPACE_URL", "https://darshanrevankar-newsai.hf.space")
 WEBHOOK_PATH = "/telegram-webhook"
 WEBHOOK_URL = f"{SPACE_URL}{WEBHOOK_PATH}"
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-# Build bot at import time (no network calls here)
-bot_app = get_application()
-if bot_app:
-    print("Telegram bot application built. Call /setup-webhook to register.", flush=True)
-
-@app.on_event("startup")
-async def startup_bot_event():
-    print(f"Server ready. Visit /setup-webhook to register Telegram webhook.", flush=True)
-
-@app.get("/setup-webhook")
-async def setup_webhook():
-    """Call this once after deployment to register the Telegram webhook."""
-    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    if not TOKEN:
-        return {"ok": False, "error": "TELEGRAM_BOT_TOKEN not set"}
-    import requests as _requests
-    r = _requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/setWebhook",
-        json={"url": WEBHOOK_URL, "drop_pending_updates": True},
-        timeout=30
-    )
-    return r.json()
-
-@app.get("/webhook-info")
-async def webhook_info():
-    """Check current webhook registration status."""
-    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    if not TOKEN:
-        return {"ok": False, "error": "TELEGRAM_BOT_TOKEN not set"}
-    import requests as _requests
-    r = _requests.get(
-        f"https://api.telegram.org/bot{TOKEN}/getWebhookInfo",
-        timeout=30
-    )
-    return r.json()
+# Bot instance - no initialize() call needed for send_message
+tg_bot = Bot(token=TELEGRAM_TOKEN) if TELEGRAM_TOKEN else None
+if tg_bot:
+    print("Telegram Bot instance ready.", flush=True)
+else:
+    print("No TELEGRAM_BOT_TOKEN set.", flush=True)
 
 @app.post(WEBHOOK_PATH)
 async def telegram_webhook(request: Request):
-    if not bot_app:
-        return {"ok": False, "error": "Bot not initialized"}
+    if not tg_bot:
+        return {"ok": False, "error": "No bot token"}
+
     data = await request.json()
-    update = Update.de_json(data, bot_app.bot)
-    await bot_app.process_update(update)
+    msg = data.get("message") or data.get("edited_message")
+    if not msg:
+        return {"ok": True}
+
+    chat_id = msg["chat"]["id"]
+    text = msg.get("text", "").strip()
+    user_id = str(msg.get("from", {}).get("id", "1"))
+
+    async def send(reply: str):
+        await tg_bot.send_message(chat_id=chat_id, text=reply[:4096])
+
+    if text.startswith("/start") or text.startswith("/help"):
+        await send(
+            "Hello! I am your AI News Agent ☁️\n\n"
+            "Commands:\n"
+            "/news <topic> - Get latest news\n"
+            "/briefing - Get your daily AI briefing\n"
+            "/help - Show this message"
+        )
+
+    elif text.startswith("/news"):
+        topic = text.replace("/news", "", 1).strip()
+        if not topic:
+            await send("Please provide a topic. Example: /news AI")
+            return {"ok": True}
+        await send(f"🔍 Fetching news for '{topic}'...")
+        try:
+            articles = get_articles_for_topic(topic)
+            if not articles:
+                await send(f"No articles found for '{topic}'. Try a broader term.")
+                return {"ok": True}
+            interests = get_user_interests(user_id)
+            ranked = rank_articles_with_llm(articles, interests)[:5]
+            summaries = summarize_articles(ranked)
+            reply = f"📰 *News for {topic}:*\n\n"
+            for item in summaries:
+                reply += f"• {item['title']}\n{item['summary']}\n🔗 {item['link']}\n\n"
+            reply += "☕ https://buymeacoffee.com/darshanrevankar"
+            await send(reply)
+        except Exception as e:
+            await send(f"Sorry, something went wrong: {e}")
+
+    elif text.startswith("/briefing"):
+        await send("Writing your daily briefing... (this takes a few seconds)")
+        try:
+            briefing = generate_daily_briefing(1)
+            briefing += "\n\n☕ https://buymeacoffee.com/darshanrevankar"
+            await send(briefing)
+        except Exception as e:
+            await send(f"Failed to generate briefing: {e}")
+
+    else:
+        # Treat plain text as a news topic
+        topic = text
+        await send(f"🔍 Fetching news for '{topic}'...")
+        try:
+            articles = get_articles_for_topic(topic)
+            if not articles:
+                await send(f"No articles found for '{topic}'.")
+                return {"ok": True}
+            interests = get_user_interests(user_id)
+            ranked = rank_articles_with_llm(articles, interests)[:5]
+            summaries = summarize_articles(ranked)
+            reply = f"📰 *News for {topic}:*\n\n"
+            for item in summaries:
+                reply += f"• {item['title']}\n{item['summary']}\n🔗 {item['link']}\n\n"
+            reply += "☕ https://buymeacoffee.com/darshanrevankar"
+            await send(reply)
+        except Exception as e:
+            await send(f"Error: {e}")
+
     return {"ok": True}
