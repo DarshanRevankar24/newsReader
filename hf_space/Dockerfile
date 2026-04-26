@@ -22,5 +22,5 @@ ENV PATH="/home/user/.local/bin:$PATH"
 # Expose the Hugging Face Spaces port
 EXPOSE 7860
 
-# Command to run the application using uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+# Command to run both the FastAPI application and the Telegram Bot
+CMD python agents/telegram_bot.py & uvicorn main:app --host 0.0.0.0 --port 7860
