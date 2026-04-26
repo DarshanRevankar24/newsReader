@@ -167,26 +167,29 @@ async def startup_bot_event():
 @app.get("/setup-webhook")
 async def setup_webhook():
     """Call this once after deployment to register the Telegram webhook."""
-    if not bot_app:
-        return {"ok": False, "error": "Bot not initialized - check TELEGRAM_BOT_TOKEN secret"}
-    try:
-        await bot_app.initialize()
-        result = await bot_app.bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
-        return {"ok": True, "webhook_url": WEBHOOK_URL, "result": result}
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
+    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not TOKEN:
+        return {"ok": False, "error": "TELEGRAM_BOT_TOKEN not set"}
+    import requests as _requests
+    r = _requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/setWebhook",
+        json={"url": WEBHOOK_URL, "drop_pending_updates": True},
+        timeout=30
+    )
+    return r.json()
 
 @app.get("/webhook-info")
 async def webhook_info():
     """Check current webhook registration status."""
-    if not bot_app:
-        return {"ok": False, "error": "Bot not initialized"}
-    try:
-        await bot_app.initialize()
-        info = await bot_app.bot.get_webhook_info()
-        return {"ok": True, "url": info.url, "pending_count": info.pending_update_count}
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
+    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not TOKEN:
+        return {"ok": False, "error": "TELEGRAM_BOT_TOKEN not set"}
+    import requests as _requests
+    r = _requests.get(
+        f"https://api.telegram.org/bot{TOKEN}/getWebhookInfo",
+        timeout=30
+    )
+    return r.json()
 
 @app.post(WEBHOOK_PATH)
 async def telegram_webhook(request: Request):
