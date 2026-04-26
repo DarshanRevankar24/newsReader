@@ -1,7 +1,6 @@
 feedparser
 python-dotenv
 langchain-groq
-langchain-core
 python-telegram-bot
 sqlalchemy
 uvicorn
