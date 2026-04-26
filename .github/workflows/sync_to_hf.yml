@@ -3,7 +3,6 @@ on:
   push:
     branches: [master]
 
-  # to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -12,9 +11,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           lfs: true
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push --force https://DarshanRevankar:$HF_TOKEN@huggingface.co/spaces/DarshanRevankar/newsAI master:main
+        run: |
+          rm -rf .git
+          git config --global user.email "bot@example.com"
+          git config --global user.name "Bot"
+          git init
+          git add .
+          git commit -m "Deploy to HF Space"
+          git push --force https://DarshanRevankar:$HF_TOKEN@huggingface.co/spaces/DarshanRevankar/newsAI master:main
