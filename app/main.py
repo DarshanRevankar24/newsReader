@@ -155,39 +155,43 @@ SPACE_URL = os.getenv("SPACE_URL", "https://darshanrevankar-newsai.hf.space")
 WEBHOOK_PATH = "/telegram-webhook"
 WEBHOOK_URL = f"{SPACE_URL}{WEBHOOK_PATH}"
 
-bot_app = None
+# Build bot at import time (no network calls here)
+bot_app = get_application()
+if bot_app:
+    print("Telegram bot application built. Call /setup-webhook to register.", flush=True)
 
 @app.on_event("startup")
 async def startup_bot_event():
-    global bot_app
-    bot_app = get_application()
+    print(f"Server ready. Visit /setup-webhook to register Telegram webhook.", flush=True)
 
-    if bot_app:
-        try:
-            print(f"Initializing Telegram bot and registering webhook at {WEBHOOK_URL}...", flush=True)
-            await bot_app.initialize()
-            await bot_app.bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
-            print("Telegram webhook registered successfully.", flush=True)
-        except Exception as e:
-            print(f"Warning: Telegram webhook setup failed: {e}", flush=True)
-            bot_app = None
-    else:
-        print("Telegram bot not started - missing TELEGRAM_BOT_TOKEN?", flush=True)
+@app.get("/setup-webhook")
+async def setup_webhook():
+    """Call this once after deployment to register the Telegram webhook."""
+    if not bot_app:
+        return {"ok": False, "error": "Bot not initialized - check TELEGRAM_BOT_TOKEN secret"}
+    try:
+        await bot_app.initialize()
+        result = await bot_app.bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
+        return {"ok": True, "webhook_url": WEBHOOK_URL, "result": result}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
-@app.on_event("shutdown")
-async def shutdown_bot_event():
-    global bot_app
-    if bot_app:
-        try:
-            await bot_app.bot.delete_webhook()
-            await bot_app.shutdown()
-        except Exception as e:
-            print(f"Error during bot shutdown: {e}", flush=True)
+@app.get("/webhook-info")
+async def webhook_info():
+    """Check current webhook registration status."""
+    if not bot_app:
+        return {"ok": False, "error": "Bot not initialized"}
+    try:
+        await bot_app.initialize()
+        info = await bot_app.bot.get_webhook_info()
+        return {"ok": True, "url": info.url, "pending_count": info.pending_update_count}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 @app.post(WEBHOOK_PATH)
 async def telegram_webhook(request: Request):
     if not bot_app:
-        return {"ok": False}
+        return {"ok": False, "error": "Bot not initialized"}
     data = await request.json()
     update = Update.de_json(data, bot_app.bot)
     await bot_app.process_update(update)
