@@ -147,10 +147,14 @@ def get_user_profile_text(user_id):
 
 from agents.telegram_bot import get_application
 
-bot_app = get_application()
+# Defer instantiation here globally
+bot_app = None
 
 @app.on_event("startup")
 async def startup_bot_event():
+    global bot_app
+    bot_app = get_application()
+    
     if bot_app:
         print("Starting Telegram polling natively in FastAPI...", flush=True)
         await bot_app.initialize()
@@ -161,6 +165,7 @@ async def startup_bot_event():
 
 @app.on_event("shutdown")
 async def shutdown_bot_event():
+    global bot_app
     if bot_app:
         print("Shutting down Telegram bot...", flush=True)
         await bot_app.updater.stop()
