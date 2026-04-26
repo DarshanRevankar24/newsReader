@@ -156,10 +156,15 @@ async def startup_bot_event():
     bot_app = get_application()
     
     if bot_app:
-        print("Starting Telegram polling natively in FastAPI...", flush=True)
-        await bot_app.initialize()
-        await bot_app.start()
-        await bot_app.updater.start_polling(drop_pending_updates=True)
+        try:
+            print("Starting Telegram polling natively in FastAPI...", flush=True)
+            await bot_app.initialize()
+            await bot_app.start()
+            await bot_app.updater.start_polling(drop_pending_updates=True)
+            print("Telegram bot polling started successfully.", flush=True)
+        except Exception as e:
+            print(f"Warning: Telegram bot failed to start: {e}", flush=True)
+            bot_app = None
     else:
         print("Telegram bot not started - missing token?", flush=True)
 
