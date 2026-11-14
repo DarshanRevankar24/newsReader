@@ -24,6 +24,15 @@ app.add_middleware(
 def home():
     return {"backend":"up"}
 
+@app.get("/debug")
+def debug_env():
+    key = os.getenv("GROQ_API_KEY", "")
+    return {
+        "GROQ_API_KEY_set": bool(key),
+        "GROQ_API_KEY_prefix": key[:8] + "..." if len(key) > 8 else "NOT SET",
+        "GROQ_API_KEY_length": len(key),
+    }
+
 from db.models import Base
 from db.core import engine
 
