@@ -1,4 +1,4 @@
-from agents.summary_agent import llm
+from agents.summary_agent import get_llm
 from langchain_core.messages import HumanMessage
 from utils.embeddings import embed
 import numpy as np
@@ -52,9 +52,6 @@ def score_article(article):
     
 
 def llm_score_article(article, interests):
-    if not llm:
-        return 0
-
     prompt = f"""
 You are a news relevance evaluator.
 
@@ -72,12 +69,16 @@ Respond with ONLY a number.
 """
 
     try:
+        llm = get_llm()
+        if not llm:
+            return 0
         response = llm.invoke([HumanMessage(content=prompt)])
         try:
             return int(response.content.strip())
         except ValueError:
             return 0
-    except Exception:
+    except Exception as e:
+        print(f"Warning: Failed to score article with Groq: {e}")
         return 0
 
 def rank_articles_with_llm(articles, interests):

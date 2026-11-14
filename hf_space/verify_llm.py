@@ -10,20 +10,19 @@ load_dotenv("app/agents/.env")
 print(f"Checking GROQ_API_KEY...")
 key = os.getenv("GROQ_API_KEY")
 if key:
-    print(f"Key found: {key[:5]}...{key[-5:]}")
+    print("GROQ_API_KEY found.")
 else:
     print("ERROR: GROQ_API_KEY not found in environment variables.")
 
 try:
-    from langchain_groq import ChatGroq
     from langchain_core.messages import HumanMessage
+    from agents.summary_agent import get_llm
     
     if key:
-        print("Initializing ChatGroq...")
-        llm = ChatGroq(
-            api_key=key,
-            model="llama-3.3-70b-versatile"
-        )
+        print("Finding an available Groq chat model...")
+        llm = get_llm()
+        if not llm:
+            raise RuntimeError("GROQ_API_KEY is not configured.")
         print("Invoking LLM...")
         response = llm.invoke([HumanMessage(content="Say hello")])
         print(f"Response: {response.content}")

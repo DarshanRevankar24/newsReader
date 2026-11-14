@@ -1,4 +1,4 @@
-from agents.summary_agent import llm
+from agents.summary_agent import get_llm
 from langchain_core.messages import HumanMessage
 from db.core import SessionLocal
 from db.models import UserProfile, Article
@@ -30,11 +30,11 @@ def generate_daily_briefing(user_id: int):
     Focus on what matches their profile.
     """
     
-    if not llm:
-        db.close()
-        return "LLM is unavailable. Here are your top headlines:\n" + articles_text
-
     try:
+        llm = get_llm()
+        if not llm:
+            db.close()
+            return "LLM is unavailable. Here are your top headlines:\n" + articles_text
         response = llm.invoke([HumanMessage(content=prompt)])
         db.close()
         return response.content
