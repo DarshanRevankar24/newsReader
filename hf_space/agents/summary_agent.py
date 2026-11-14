@@ -16,7 +16,7 @@ def get_llm():
         return None
     if _llm is None:
         try:
-            _llm = ChatGroq(api_key=api_key, model="llama-3.1-8b-instant")
+            _llm = ChatGroq(api_key=api_key, model="llama-3.3-70b-versatile")
             print(f"LLM initialized with key prefix: {api_key[:8]}...")
         except Exception as e:
             print(f"Warning: Failed to initialize LLM: {e}")

@@ -12,7 +12,7 @@ try:
     else:
         llm = ChatGroq(
             api_key=os.getenv("GROQ_API_KEY"),
-            model="llama-3.1-8b-instant"
+            model="llama-3.3-70b-versatile"
         )
 except Exception as e:
     print(f"Warning: Failed to initialize LLM: {e}")

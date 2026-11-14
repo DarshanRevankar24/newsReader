@@ -22,7 +22,7 @@ try:
         print("Initializing ChatGroq...")
         llm = ChatGroq(
             api_key=key,
-            model="llama-3.1-8b-instant"
+            model="llama-3.3-70b-versatile"
         )
         print("Invoking LLM...")
         response = llm.invoke([HumanMessage(content="Say hello")])
