@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NewsAI — Your Personalized AI News Reader</title>
+  <meta name="description" content="Get AI-powered, personalized news summaries on any topic. Powered by LLM agents and curated RSS feeds." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* ===================== CSS RESET & TOKENS ===================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary:    #07080f;
+      --bg-secondary:  #0d0f1e;
+      --bg-card:       rgba(255,255,255,0.04);
+      --bg-card-hover: rgba(255,255,255,0.08);
+      --border:        rgba(255,255,255,0.08);
+      --border-glow:   rgba(139,92,246,0.4);
+
+      --accent-1: #8b5cf6;
+      --accent-2: #6366f1;
+      --accent-3: #a78bfa;
+      --accent-pink: #ec4899;
+
+      --text-primary:   #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted:     #475569;
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+
+      --shadow-glow: 0 0 40px rgba(139,92,246,0.15);
+      --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+
+      --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* ===================== BACKGROUND MESH ===================== */
+    .bg-mesh {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139,92,246,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 80%, rgba(99,102,241,0.12) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 5% 70%, rgba(236,72,153,0.08) 0%, transparent 50%);
+    }
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* ===================== LAYOUT ===================== */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
+
+    /* ===================== NAVBAR ===================== */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(7,8,15,0.75);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.3rem; font-weight: 800; letter-spacing: -0.5px;
+      text-decoration: none; color: var(--text-primary);
+    }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; box-shadow: 0 4px 12px rgba(139,92,246,0.4);
+    }
+    .logo-text span { color: var(--accent-3); }
+
+    .nav-user {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-user label { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+    #username-input {
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      color: var(--text-primary); border-radius: var(--radius-sm);
+      padding: 7px 12px; font-size: 0.85rem; font-family: inherit;
+      outline: none; width: 130px; transition: var(--transition);
+    }
+    #username-input:focus { border-color: var(--accent-1); box-shadow: 0 0 0 3px rgba(139,92,246,0.15); }
+
+    /* ===================== HERO ===================== */
+    .hero {
+      padding: 80px 0 50px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.3);
+      border-radius: 100px; padding: 5px 14px;
+      font-size: 0.75rem; font-weight: 600; color: var(--accent-3);
+      letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 24px;
+    }
+    .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-3); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    h1 {
+      font-size: clamp(2.2rem, 6vw, 4rem);
+      font-weight: 900; line-height: 1.1; letter-spacing: -1.5px;
+      margin-bottom: 20px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #fff 20%, var(--accent-3) 60%, var(--accent-pink));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero p {
+      font-size: 1.1rem; color: var(--text-secondary); max-width: 520px;
+      margin: 0 auto 36px; font-weight: 400;
+    }
+
+    /* ===================== SEARCH BAR ===================== */
+    .search-wrap {
+      max-width: 600px; margin: 0 auto 32px;
+      position: relative;
+    }
+    .search-wrap .search-icon {
+      position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); font-size: 1.1rem; pointer-events: none;
+    }
+    #search-input {
+      width: 100%; padding: 16px 160px 16px 50px;
+      font-size: 1rem; font-family: inherit; font-weight: 500;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      color: var(--text-primary);
+      outline: none; transition: var(--transition);
+    }
+    #search-input::placeholder { color: var(--text-muted); }
+    #search-input:focus {
+      border-color: var(--accent-1);
+      background: rgba(139,92,246,0.06);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.12), var(--shadow-glow);
+    }
+    #search-btn {
+      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      padding: 10px 22px; border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      color: #fff; font-weight: 600; font-size: 0.9rem; font-family: inherit;
+      border: none; cursor: pointer; transition: var(--transition);
+      box-shadow: 0 4px 14px rgba(139,92,246,0.4);
+    }
+    #search-btn:hover { transform: translateY(-50%) scale(1.04); box-shadow: 0 6px 20px rgba(139,92,246,0.5); }
+    #search-btn:active { transform: translateY(-50%) scale(0.98); }
+    #search-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ===================== CATEGORY CHIPS ===================== */
+    .chips-wrap {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      justify-content: center; margin-bottom: 56px;
+    }
+    .chip {
+      padding: 7px 16px; border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--bg-card); color: var(--text-secondary);
+      font-size: 0.82rem; font-weight: 500; font-family: inherit;
+      cursor: pointer; transition: var(--transition);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .chip:hover {
+      border-color: var(--accent-1); color: var(--accent-3);
+      background: rgba(139,92,246,0.1); transform: translateY(-1px);
+    }
+    .chip.active {
+      border-color: var(--accent-1); color: #fff;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      box-shadow: 0 4px 12px rgba(139,92,246,0.3);
+    }
+
+    /* ===================== SECTION TITLE ===================== */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-title {
+      font-size: 1.1rem; font-weight: 700; color: var(--text-primary);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title .pill {
+      background: rgba(139,92,246,0.15); color: var(--accent-3);
+      border-radius: 100px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600;
+    }
+
+    /* ===================== BRIEFING PANEL ===================== */
+    .briefing-section { margin-bottom: 56px; }
+    #briefing-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: var(--radius-md);
+      background: rgba(236,72,153,0.1); border: 1px solid rgba(236,72,153,0.3);
+      color: var(--accent-pink); font-weight: 600; font-size: 0.88rem; font-family: inherit;
+      cursor: pointer; transition: var(--transition);
+    }
+    #briefing-btn:hover { background: rgba(236,72,153,0.18); transform: translateY(-1px); }
+
+    #briefing-box {
+      margin-top: 20px; padding: 24px 28px;
+      background: rgba(236,72,153,0.05);
+      border: 1px solid rgba(236,72,153,0.2);
+      border-radius: var(--radius-lg);
+      display: none; animation: fadeIn 0.4s ease;
+    }
+    #briefing-box.show { display: block; }
+    #briefing-text {
+      font-size: 1rem; line-height: 1.8; color: var(--text-secondary);
+      white-space: pre-line;
+    }
+
+    /* ===================== NEWS GRID ===================== */
+    .news-section { margin-bottom: 60px; }
+
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+
+    /* ===================== NEWS CARD ===================== */
+    .news-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex; flex-direction: column; gap: 14px;
+      transition: var(--transition);
+      animation: slideUp 0.4s ease both;
+      cursor: default;
+    }
+    .news-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(139,92,246,0.3);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-card), 0 0 30px rgba(139,92,246,0.08);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-source {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .source-badge {
+      font-size: 0.72rem; font-weight: 600; padding: 4px 10px;
+      border-radius: 100px; background: rgba(99,102,241,0.15);
+      color: var(--accent-2); border: 1px solid rgba(99,102,241,0.25);
+      max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .card-time { font-size: 0.72rem; color: var(--text-muted); }
+
+    .card-title {
+      font-size: 1rem; font-weight: 700; line-height: 1.4; color: var(--text-primary);
+    }
+
+    .card-summary {
+      font-size: 0.875rem; color: var(--text-secondary); line-height: 1.65; flex: 1;
+      display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .card-actions {
+      display: flex; align-items: center; gap: 8px; padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+    .action-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 7px 13px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); font-size: 0.8rem; font-weight: 500; font-family: inherit;
+      cursor: pointer; transition: var(--transition);
+    }
+    .action-btn:hover { border-color: var(--border-glow); color: var(--text-primary); background: rgba(255,255,255,0.04); }
+    .action-btn.like:hover { border-color: rgba(34,197,94,0.5); color: #22c55e; background: rgba(34,197,94,0.07); }
+    .action-btn.dislike:hover { border-color: rgba(239,68,68,0.5); color: #ef4444; background: rgba(239,68,68,0.07); }
+    .action-btn.read-more {
+      margin-left: auto; color: var(--accent-3); border-color: rgba(167,139,250,0.3);
+      background: rgba(139,92,246,0.06); text-decoration: none;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .action-btn.read-more:hover { background: rgba(139,92,246,0.14); border-color: var(--accent-1); }
+
+    /* ===================== SKELETON ===================== */
+    .skeleton-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .skel {
+      border-radius: 6px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.05) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .skel-sm { height: 14px; width: 60%; }
+    .skel-title { height: 20px; width: 90%; }
+    .skel-title-2 { height: 20px; width: 75%; }
+    .skel-body { height: 12px; }
+    .skel-body-2 { height: 12px; width: 85%; }
+    .skel-body-3 { height: 12px; width: 70%; }
+
+    /* ===================== EMPTY / ERROR STATES ===================== */
+    .empty-state {
+      text-align: center; padding: 60px 20px; grid-column: 1/-1;
+    }
+    .empty-state .emoji { font-size: 3rem; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 1.1rem; color: var(--text-secondary); font-weight: 600; }
+    .empty-state p { font-size: 0.88rem; color: var(--text-muted); margin-top: 6px; }
+
+    /* ===================== TOAST ===================== */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .toast {
+      padding: 12px 20px; border-radius: var(--radius-md);
+      background: rgba(13,15,30,0.95); border: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      color: var(--text-primary); font-size: 0.88rem; font-weight: 500;
+      display: flex; align-items: center; gap: 10px;
+      animation: toastIn 0.3s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      max-width: 320px;
+    }
+    .toast.success { border-color: rgba(34,197,94,0.3); }
+    .toast.error   { border-color: rgba(239,68,68,0.3); }
+    .toast.info    { border-color: rgba(139,92,246,0.3); }
+    @keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+
+    /* ===================== FOOTER ===================== */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 0; text-align: center;
+      color: var(--text-muted); font-size: 0.82rem;
+    }
+    footer a { color: var(--accent-3); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ===================== RESPONSIVE ===================== */
+    @media (max-width: 640px) {
+      h1 { letter-spacing: -0.5px; }
+      .hero { padding: 50px 0 30px; }
+      .nav-inner { flex-wrap: wrap; gap: 10px; }
+      .nav-user label { display: none; }
+      #username-input { width: 110px; }
+      .news-grid { grid-template-columns: 1fr; }
+      #search-input { padding-right: 120px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg-mesh"></div>
+<div class="bg-grid"></div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- ===================== NAV ===================== -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#" class="logo">
+        <div class="logo-icon">📰</div>
+        <span class="logo-text">News<span>AI</span></span>
+      </a>
+      <div class="nav-user">
+        <label for="username-input">Your name:</label>
+        <input type="text" id="username-input" placeholder="e.g. darshan" maxlength="20" autocomplete="off" />
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ===================== HERO ===================== -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge"><span class="dot"></span> Powered by AI Agents + LLM</div>
+    <h1>Your <span class="gradient-text">Personalized</span><br>AI News Reader</h1>
+    <p>Get AI-summarized, ranked news on any topic — from technology to cricket — tailored to your interests.</p>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Search any topic… AI, cricket, startups…" autocomplete="off" />
+      <button id="search-btn" onclick="triggerSearch()">Get News</button>
+    </div>
+
+    <!-- Category chips -->
+    <div class="chips-wrap">
+      <button class="chip" onclick="selectChip(this,'technology')">💻 Technology</button>
+      <button class="chip" onclick="selectChip(this,'ai')">🤖 AI</button>
+      <button class="chip" onclick="selectChip(this,'world')">🌍 World</button>
+      <button class="chip" onclick="selectChip(this,'india')">🇮🇳 India</button>
+      <button class="chip" onclick="selectChip(this,'business')">💼 Business</button>
+      <button class="chip" onclick="selectChip(this,'sports')">🏆 Sports</button>
+      <button class="chip" onclick="selectChip(this,'cricket')">🏏 Cricket</button>
+      <button class="chip" onclick="selectChip(this,'health')">❤️ Health</button>
+      <button class="chip" onclick="selectChip(this,'science')">🔬 Science</button>
+      <button class="chip" onclick="selectChip(this,'entertainment')">🎬 Entertainment</button>
+      <button class="chip" onclick="selectChip(this,'startups')">🚀 Startups</button>
+      <button class="chip" onclick="selectChip(this,'politics')">🏛️ Politics</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== MAIN CONTENT ===================== -->
+<main class="container">
+
+  <!-- Daily Briefing -->
+  <section class="briefing-section">
+    <div class="section-header">
+      <div class="section-title">
+        📋 Daily AI Briefing
+        <span class="pill">Personalized</span>
+      </div>
+      <button id="briefing-btn" onclick="loadBriefing()">
+        ✨ Generate My Briefing
+      </button>
+    </div>
+    <div id="briefing-box">
+      <div id="briefing-text">Loading your personalized briefing...</div>
+    </div>
+  </section>
+
+  <!-- News Results -->
+  <section class="news-section" id="news-section" style="display:none">
+    <div class="section-header">
+      <div class="section-title" id="news-section-title">
+        📰 Latest News
+        <span class="pill" id="topic-pill"></span>
+      </div>
+    </div>
+    <div class="news-grid" id="news-grid"></div>
+  </section>
+
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer>
+  <div class="container">
+    <p>Built with ❤️ by <a href="https://buymeacoffee.com/darshanrevankar" target="_blank">Darshan Revankar</a> &nbsp;·&nbsp; Powered by LLM Agents, FastAPI &amp; RSS Feeds</p>
+    <p style="margin-top:6px"><a href="https://buymeacoffee.com/darshanrevankar" target="_blank">☕ Buy me a coffee</a></p>
+  </div>
+</footer>
+
+<!-- ===================== JAVASCRIPT ===================== -->
+<script>
+  // ── Config ──────────────────────────────────────────────────────────────────
+  const API_BASE = 'https://darshanrevankar-newsai.hf.space';
+
+  // ── User Identity ───────────────────────────────────────────────────────────
+  const usernameInput = document.getElementById('username-input');
+  let savedUsername = localStorage.getItem('newsai_username') || '';
+  usernameInput.value = savedUsername;
+  usernameInput.addEventListener('input', () => {
+    localStorage.setItem('newsai_username', usernameInput.value.trim() || 'user_1');
+  });
+  function getUserId() {
+    const val = usernameInput.value.trim();
+    if (!val) return 'user_1';
+    // If numeric use as-is, else prefix
+    return isNaN(val) ? `user_${val}` : val;
+  }
+
+  // ── State ───────────────────────────────────────────────────────────────────
+  let currentTopic = '';
+  let activeChip = null;
+
+  // ── Search ──────────────────────────────────────────────────────────────────
+  document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') triggerSearch();
+  });
+
+  function triggerSearch() {
+    const val = document.getElementById('search-input').value.trim();
+    if (!val) { showToast('Please enter a topic to search.', 'error'); return; }
+    // Deactivate chip
+    if (activeChip) { activeChip.classList.remove('active'); activeChip = null; }
+    fetchNews(val);
+  }
+
+  function selectChip(el, topic) {
+    document.getElementById('search-input').value = topic;
+    if (activeChip && activeChip !== el) activeChip.classList.remove('active');
+    el.classList.add('active');
+    activeChip = el;
+    fetchNews(topic);
+  }
+
+  // ── Fetch News ──────────────────────────────────────────────────────────────
+  async function fetchNews(topic) {
+    currentTopic = topic;
+    const section = document.getElementById('news-section');
+    const grid = document.getElementById('news-grid');
+    const btn = document.getElementById('search-btn');
+    const pill = document.getElementById('topic-pill');
+
+    pill.textContent = topic;
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+
+    // Show skeletons
+    grid.innerHTML = Array.from({length:6}).map(() => skeletonCard()).join('');
+
+    try {
+      const res = await fetch(`${API_BASE}/news/${encodeURIComponent(topic)}?user_id=${encodeURIComponent(getUserId())}`);
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const data = await res.json();
+      renderNews(data);
+    } catch(err) {
+      console.error(err);
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="emoji">😕</div>
+          <h3>Couldn't fetch news</h3>
+          <p>${err.message.includes('Failed to fetch') ? 'Could not reach the backend. Check your connection.' : err.message}</p>
+        </div>`;
+      showToast('Failed to fetch news. Try again.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Get News';
+    }
+  }
+
+  // ── Render News Cards ───────────────────────────────────────────────────────
+  function renderNews(data) {
+    const grid = document.getElementById('news-grid');
+    const articles = data.news || [];
+
+    if (!articles.length) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="emoji">📭</div>
+          <h3>No articles found for "${currentTopic}"</h3>
+          <p>Try a different or broader topic.</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = articles.map((art, i) => `
+      <div class="news-card" style="animation-delay:${i * 0.07}s" id="card-${i}">
+        <div class="card-source">
+          <span class="source-badge">${escHtml(art.source || 'Unknown')}</span>
+          <span class="card-time">Just now</span>
+        </div>
+        <div class="card-title">${escHtml(art.title || 'No title')}</div>
+        <div class="card-summary">${escHtml(art.summary || 'No summary available.')}</div>
+        <div class="card-actions">
+          <button class="action-btn like" onclick="sendFeedback('${escHtml(art.link || '')}', 'like', this)" title="Like">👍 Like</button>
+          <button class="action-btn dislike" onclick="sendFeedback('${escHtml(art.link || '')}', 'dislike', this)" title="Dislike">👎 Dislike</button>
+          ${art.link ? `<a class="action-btn read-more" href="${escHtml(art.link)}" target="_blank" rel="noopener">Read →</a>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    showToast(`Loaded ${articles.length} articles for "${currentTopic}"`, 'success');
+  }
+
+  // ── Briefing ────────────────────────────────────────────────────────────────
+  async function loadBriefing() {
+    const btn = document.getElementById('briefing-btn');
+    const box = document.getElementById('briefing-box');
+    const text = document.getElementById('briefing-text');
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Generating…';
+    box.classList.add('show');
+    text.textContent = 'Generating your personalized daily briefing…';
+
+    try {
+      const res = await fetch(`${API_BASE}/briefing?user_id=${encodeURIComponent(getUserId())}`);
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const data = await res.json();
+      text.textContent = data.briefing || 'No briefing available.';
+      showToast('Daily briefing ready!', 'success');
+    } catch(err) {
+      text.textContent = `Couldn't load briefing: ${err.message}`;
+      showToast('Failed to load briefing.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '✨ Refresh Briefing';
+    }
+  }
+
+  // ── Feedback ────────────────────────────────────────────────────────────────
+  async function sendFeedback(link, type, btn) {
+    if (!link) { showToast('No article link to submit feedback for.', 'error'); return; }
+    btn.disabled = true;
+
+    try {
+      await fetch(`${API_BASE}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: getUserId(),
+          article_link: link,
+          interaction_type: type
+        })
+      });
+      showToast(type === 'like' ? '👍 Liked! Your profile updated.' : '👎 Noted! Less of this.', 'success');
+    } catch(err) {
+      showToast('Could not submit feedback.', 'error');
+      btn.disabled = false;
+    }
+  }
+
+  // ── Toast ───────────────────────────────────────────────────────────────────
+  function showToast(msg, type = 'info') {
+    const icons = { success: '✅', error: '❌', info: '💡' };
+    const container = document.getElementById('toast-container');
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<span>${icons[type]}</span> ${msg}`;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function skeletonCard() {
+    return `
+      <div class="skeleton-card">
+        <div class="skel skel-sm"></div>
+        <div class="skel skel-title"></div>
+        <div class="skel skel-title-2"></div>
+        <div class="skel skel-body"></div>
+        <div class="skel skel-body-2"></div>
+        <div class="skel skel-body-3"></div>
+      </div>`;
+  }
+
+  // ── Auto-load on first visit ─────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    // Load Technology news by default
+    const techChip = document.querySelector('.chip');
+    if (techChip) techChip.click();
+  });
+</script>
+</body>
+</html>

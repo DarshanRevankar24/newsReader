@@ -11,6 +11,15 @@ from agents.memory_agent import update_memory, get_user_interests
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/")
 def home():
     return {"backend":"up"}
@@ -149,9 +158,9 @@ def get_user_profile_text(user_id):
 from telegram import Bot, Update
 
 # Telegram config
-SPACE_URL = os.getenv("SPACE_URL", "https://darshanrevankar-newsai.hf.space")
+BASE_URL = os.getenv("BASE_URL", "https://YOUR_FIREBASE_APP_URL") # E.g., your Cloud Run or Firebase Hosting URL
 WEBHOOK_PATH = "/telegram-webhook"
-WEBHOOK_URL = f"{SPACE_URL}{WEBHOOK_PATH}"
+WEBHOOK_URL = f"{BASE_URL}{WEBHOOK_PATH}"
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # Bot instance - no initialize() call needed for send_message
