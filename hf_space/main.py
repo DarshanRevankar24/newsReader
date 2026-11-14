@@ -35,48 +35,37 @@ def debug_env():
 
 @app.get("/briefing")
 def get_briefing(user_id: str = "user_1"):
-    numeric_uid = 1
-    if user_id.startswith("user_"):
-         numeric_uid = int(user_id.split("_")[1])
-    
-    briefing = generate_daily_briefing(numeric_uid)
-    return {"briefing": briefing}
+    try:
+        numeric_uid = 1
+        if user_id.startswith("user_"):
+             numeric_uid = int(user_id.split("_")[1])
+        briefing = generate_daily_briefing(numeric_uid)
+        return {"briefing": briefing}
+    except Exception as e:
+        return {"briefing": f"Error generating briefing: {str(e)}"}
 
 @app.get("/news/{topic}")
 def get_news(topic: str, user_id: str = "user_1"):
-    # 1. Get articles for the topic
-    # Using get_articles_for_topic from rss_agent
-    articles = get_articles_for_topic(topic)
-    
-    if not articles:
-        return {"message": f"No articles found for topic: {topic}", "news": []}
+    try:
+        articles = get_articles_for_topic(topic)
+        
+        if not articles:
+            return {"message": f"No articles found for topic: {topic}", "news": []}
 
-    # 2. Get User Interests
-    # Currently from memory_agent (in-memory), later will be from DB
-    interests = get_user_interests(user_id)
-    
-    # 3. Rank Articles
-    # Using the fixed rank_agent function
-    ranked_articles = rank_articles_with_llm(
-        articles,
-        interests
-    )
+        interests = get_user_interests(user_id)
+        ranked_articles = rank_articles_with_llm(articles, interests)
+        top_articles = ranked_articles[:5]
+        summaries = summarize_articles(top_articles)
+        update_memory(user_id, top_articles)
+        save_articles_to_db(top_articles)
 
-    # 4. Limit and Summarize
-    # Summarize top 5
-    top_articles = ranked_articles[:5]
-    summaries = summarize_articles(top_articles)
-
-    # 5. Update Memory
-    # Record that these articles proved relevant (or just seen)
-    update_memory(user_id, top_articles)
-    save_articles_to_db(top_articles)
-
-    return {
-        "user_id": user_id,
-        "interests": interests,
-        "news": summaries
-    }
+        return {
+            "user_id": user_id,
+            "interests": interests,
+            "news": summaries
+        }
+    except Exception as e:
+        return {"message": f"Error fetching news: {str(e)}", "news": []}
 
 from pydantic import BaseModel
 
@@ -156,24 +145,11 @@ def get_user_profile_text(user_id):
     db.close()
     return profile.profile_text if profile else "General news reader"
 
-from agents.telegram_bot import get_application
-
-bot_app = get_application()
+from db.models import Base as _Base
+from db.core import engine as _engine
 
 @app.on_event("startup")
 async def startup_event():
-    if bot_app:
-        print("Starting Telegram polling natively in FastAPI...", flush=True)
-        await bot_app.initialize()
-        await bot_app.start()
-        await bot_app.updater.start_polling(drop_pending_updates=True)
-    else:
-        print("Telegram bot not started - missing token?", flush=True)
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    if bot_app:
-        print("Shutting down Telegram bot...", flush=True)
-        await bot_app.updater.stop()
-        await bot_app.stop()
-        await bot_app.shutdown()
+    print("Creating database tables...", flush=True)
+    _Base.metadata.create_all(bind=_engine)
+    print("Database ready.", flush=True)
