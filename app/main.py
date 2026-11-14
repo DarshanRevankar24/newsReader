@@ -8,6 +8,7 @@ from agents.rss_agent import get_articles_for_topic
 from agents.rank_agent import rank_articles_with_llm
 from agents.summary_agent import summarize_articles
 from agents.memory_agent import update_memory, get_user_interests
+from utils.user_identity import numeric_user_id
 
 app = FastAPI()
 
@@ -43,11 +44,7 @@ def on_startup():
 
 @app.get("/briefing")
 def get_briefing(user_id: str = "user_1"):
-    numeric_uid = 1
-    if user_id.startswith("user_"):
-         numeric_uid = int(user_id.split("_")[1])
-    
-    briefing = generate_daily_briefing(numeric_uid)
+    briefing = generate_daily_briefing(numeric_user_id(user_id))
     return {"briefing": briefing}
 
 @app.get("/news/{topic}")
@@ -98,17 +95,13 @@ def submit_feedback(feedback: Feedback):
     db = SessionLocal()
     
     # Resolve User Link
-    numeric_user_id = 1
-    if feedback.user_id.isdigit():
-        numeric_user_id = int(feedback.user_id)
-    elif "_" in feedback.user_id:
-         numeric_user_id = int(feedback.user_id.split("_")[1])
+    numeric_uid = numeric_user_id(feedback.user_id)
     
     from db.models import UserInteraction, Article
     
     # Log Interaction
     interaction = UserInteraction(
-        user_id=numeric_user_id,
+        user_id=numeric_uid,
         article_link=feedback.article_link,
         interaction_type=feedback.interaction_type
     )
@@ -123,8 +116,8 @@ def submit_feedback(feedback: Feedback):
         from agents.profile_agent import update_user_profile
         
         signal = f"User {feedback.interaction_type}ed article: '{article.title}'. Summary: {article.summary}"
-        update_user_profile(numeric_user_id, signal)
-        print(f"Updated profile for user {numeric_user_id} based on feedback for {article.title}")
+        update_user_profile(numeric_uid, signal)
+        print(f"Updated profile for user {numeric_uid} based on feedback for {article.title}")
     
     db.commit()
     db.close()
@@ -154,12 +147,7 @@ def save_articles_to_db(articles):
 
 def get_user_profile_text(user_id):
     db = SessionLocal()
-    # Handle user_id str -> int conversion if needed for DB lookup
-    # But UserProfile.user_id is Integer.
-    uid = 1
-    if user_id.startswith("user_"):
-        uid = int(user_id.split("_")[1])
-        
+    uid = numeric_user_id(user_id)
     profile = db.query(UserProfile).filter_by(user_id=uid).first()
     db.close()
     return profile.profile_text if profile else "General news reader"
